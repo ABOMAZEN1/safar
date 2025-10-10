@@ -27,4 +27,10 @@ Route::prefix('admin/predefined-messages')->group(function () {
     Route::put('/{predefinedMessage}', [PredefinedMessageController::class, 'update'])->name('admin.predefined-messages.update');
     Route::delete('/{predefinedMessage}', [PredefinedMessageController::class, 'destroy'])->name('admin.predefined-messages.destroy');
 });
+ use App\Http\Controllers\TravelCompanyReportController;
+ Route::middleware(['web', 'auth', 'admin'])->group(function () {
+    Route::get('/admin/travel-companies/{company}/report', [TravelCompanyReportController::class, 'generate'])
+        ->name('travel-companies.report');
+});
+
 

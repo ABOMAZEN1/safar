@@ -2,10 +2,10 @@
 
 namespace App\Filament\Admin\Resources\TravelCompanies\Schemas;
 
-use App\Models\User;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Section as ComponentsSection;
 use Filament\Schemas\Schema;
 
@@ -13,76 +13,73 @@ class TravelCompanyForm
 {
     public static function configure(Schema $schema): Schema
     {
-        // جعل الكاردات تحت بعض بشكل واضح ومرتب
-        return $schema
-            ->components([
-                ComponentsSection::make('بيانات مالك الشركة')
-                    ->description('يرجى إدخال معلومات مالك الشركة بدقة')
-                    ->icon('heroicon-o-user')
-                    ->columns(1) // عمود واحد فقط، الكارد يأخذ صف كامل
-                    ->schema([
-                        TextInput::make('owner.name')
-                            ->label('اسم المالك')
-                            ->placeholder('أدخل اسم المالك')
-                            ->required()
-                            ->autofocus(),
-                        TextInput::make('owner.phone_number')
-                            ->label('رقم جوال المالك')
-                            ->placeholder('09XXXXXXXX')
-                            ->required()
-                            ->unique(User::class, 'phone_number')
-                            ->tel(),
-                        TextInput::make('owner.password')
-                            ->label('كلمة المرور')
-                            ->placeholder('********')
-                            ->required()
-                            ->password()
-                            ->minLength(6)
-                            ->revealable(),
-                    ]),
+        $isCreatePage = str_contains(request()->route()?->getName() ?? '', '.create');
 
-                ComponentsSection::make('بيانات الشركة')
-                    ->description('معلومات الشركة الأساسية')
-                    ->icon('heroicon-o-building-office')
-                    ->columns(1) // عمود واحد فقط، الكارد يأخذ صف كامل
-                    ->schema([
-                        TextInput::make('company_name')
-                            ->label('اسم الشركة')
-                            ->placeholder('اسم الشركة')
-                            ->required(),
-                        TextInput::make('contact_number')
-                            ->label('رقم الاتصال')
-                            ->placeholder('رقم الهاتف')
-                            ->required()
-                            ->tel(),
-                        TextInput::make('address')
-                            ->label('العنوان')
-                            ->placeholder('العنوان بالتفصيل')
-                            ->required(),
-                       
-                    ]),
-                    ComponentsSection::make(' شعار الشركة')
-                    ->description('شعار الشركة')
-                    ->icon('heroicon-o-building-office')
-                    ->columns([
-                        'default' => 1,
-                        'sm' => 1,
-                        'md' => 1,
-                        'lg' => 1,
-                        'xl' => 1,
-                        '2xl' => 1,
-                    ]) // الكارد ياخد عرض الشاشة كاملة على كل الأحجام
-                    ->columnSpan('full') // يجعل الكارد ياخد عرض الشاشة كاملة
-                    ->schema([
-                        FileUpload::make('image_path')
-                            ->label('شعار الشركة')
-                            ->image()
-                            ->imageEditor()
-                            ->imageCropAspectRatio('1:1')
-                            ->imagePreviewHeight('120')
-                            ->required(),
-                    ]),
-                
-                ]);
+        return $schema->components([
+            // 👤 بيانات المالك
+            ComponentsSection::make('بيانات مالك الشركة')
+                ->description('معلومات المستخدم المالك للشركة')
+                ->columns(1)
+                ->schema([
+                    TextInput::make('user.name')
+                        ->label('اسم المالك')
+                        ->required()
+                        ->formatStateUsing(fn ($state, $record) => old('user.name', $state ?? ($record->user->name ?? ''))),
+
+                    TextInput::make('user.phone_number')
+                        ->label('رقم جوال المالك')
+                        ->tel()
+                        ->required()
+                        ->formatStateUsing(fn ($state, $record) => old('user.phone_number', $state ?? ($record->user->phone_number ?? ''))),
+
+                    TextInput::make('user.password')
+                        ->label('كلمة المرور')
+                        ->password()
+                        ->placeholder('اتركها فارغة إذا لا تريد تغييرها')
+                        ->dehydrated(fn ($state) => !empty($state)),
+                ]),
+
+            // 🏢 بيانات الشركة
+            ComponentsSection::make('بيانات الشركة')
+                ->description('معلومات الشركة')
+                ->columns(1)
+                ->schema([
+                    TextInput::make('company_name')
+                        ->label('اسم الشركة')
+                        ->required(),
+
+                    TextInput::make('contact_number')
+                        ->label('رقم الشركة')
+                        ->tel()
+                        ->required(),
+
+                    TextInput::make('address')
+                        ->label('عنوان الشركة')
+                        ->required(),
+
+                    FileUpload::make('image_path')
+                        ->label('شعار الشركة')
+                        ->image()
+                        ->directory('travel_companies')
+                        ->required(),
+
+
+                    Select::make('status')
+                        ->label('الحالة')
+                        ->options([
+                            'active' => 'فعّالة',
+                            'inactive' => 'غير فعّالة',
+                        ])
+                        ->required(),
+
+                    TextInput::make('commission_amount')
+                        ->label('نسبة الربح (%)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->step(0.1)
+                        ->required(),
+                ]),
+        ]);
     }
 }

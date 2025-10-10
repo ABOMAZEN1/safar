@@ -62,8 +62,23 @@ final class TravelCompany extends Model
         'contact_number',
         'address',
         'image_path',
+        'status',
+        'commission_amount',
     ];
-
+    
+    protected function casts(): array
+    {
+        return [
+            'user_id' => 'integer',
+            'company_name' => 'string',
+            'contact_number' => 'string',
+            'address' => 'string',
+            'image_path' => 'string',
+            'status' => 'string',
+            'commission_amount' => 'decimal:2',
+        ];
+    }
+    
     /**
      * Get the user associated with the travel company.
      *
@@ -95,14 +110,11 @@ final class TravelCompany extends Model
     }
 
     /**
-     * Get all commissions for the travel company.
+     * Get all commissions for the travel compaصny.
      *
      * @return HasMany<TravelCompanyCommission>
      */
-    public function commissions(): HasMany
-    {
-        return $this->hasMany(TravelCompanyCommission::class);
-    }
+   
 
     /**
      * Accessor for the image path.
@@ -122,14 +134,5 @@ final class TravelCompany extends Model
      *
      * @return array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'user_id' => 'integer',
-            'company_name' => 'string',
-            'contact_number' => 'string',
-            'address' => 'string',
-            'image_path' => 'string',
-        ];
-    }
+ 
 }

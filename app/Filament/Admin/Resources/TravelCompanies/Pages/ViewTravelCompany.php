@@ -5,10 +5,13 @@ namespace App\Filament\Admin\Resources\TravelCompanies\Pages;
 use App\Filament\Admin\Resources\TravelCompanies\TravelCompanyResource;
 use App\Filament\Admin\Resources\TravelCompanies\RelationManagers\BusesRelationManager;
 use App\Filament\Admin\Resources\TravelCompanies\RelationManagers\BusTripsRelationManager;
+use App\Models\TravelCompany;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Resources\Pages\Concerns\HasRelationManagers;
 use Filament\Actions\EditAction;
 use Filament\Actions\Action;
+use Mpdf\Mpdf;
+use Illuminate\Support\Carbon;
 
 class ViewTravelCompany extends ViewRecord
 {
@@ -23,7 +26,107 @@ class ViewTravelCompany extends ViewRecord
             Action::make('pdf_report')
                 ->label('توليد تقرير PDF')
                 ->icon('heroicon-o-document-text')
-                ->openUrlInNewTab(),
+                ->action(function () {
+                    // جلب بيانات الشركة مع الرحلات والحجوزات
+                    $company = TravelCompany::with([
+                        'buses',
+                        'busTrips.bookings',
+                        'busTrips.bus',
+                        'busTrips.fromCity',
+                        'busTrips.toCity'
+                    ])->findOrFail($this->record->id);
+
+                    $trips = $company->busTrips;
+
+                    // تحضير بيانات التقرير
+                    $trips_count = $trips->count();
+                    $buses_count = $company->buses->count();
+                    $customers_count = $trips->sum(fn($trip) => $trip->bookings->sum('reserved_seat_count'));
+                    $revenue = $trips->sum(fn($trip) => $trip->bookings->sum('total_price'));
+
+                    // HTML التقرير بالعربي باستخدام خط Cairo
+                    $html = '
+                    <!doctype html>
+                    <html lang="ar" dir="rtl">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>تقرير أداء الشركة</title>
+                        <style>
+                            @import url("https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;700&display=swap");
+                            body { font-family: "Cairo", cairo, Arial, sans-serif; direction: rtl; line-height: 1.4; color: #333; }
+                            .card { border: 1px solid #ddd; padding: 16px; margin-bottom: 16px; border-radius: 8px; }
+                            .row { display: flex; gap: 16px; flex-wrap: wrap; }
+                            .col { flex: 1; min-width: 150px; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12pt; }
+                            th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+                            th { background-color: #f5f5f5; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>تقرير أداء الشركة</h1>
+                        <div class="card">
+                            <div><strong>اسم الشركة:</strong> '.$company->company_name.'</div>
+                            <div><strong>رقم الاتصال:</strong> '.$company->contact_number.'</div>
+                            <div><strong>العنوان:</strong> '.$company->address.'</div>
+                        </div>
+                        <div class="row">
+                            <div class="col card"><strong>عدد الرحلات:</strong> '.$trips_count.'</div>
+                            <div class="col card"><strong>عدد الباصات:</strong> '.$buses_count.'</div>
+                            <div class="col card"><strong>عدد الزبائن:</strong> '.$customers_count.'</div>
+                            <div class="col card"><strong>الإيرادات:</strong> '.number_format($revenue, 2).'</div>
+                        </div>
+                        <h2>تفاصيل الرحلات</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>من</th>
+                                    <th>إلى</th>
+                                    <th>وقت الانطلاق</th>
+                                    <th>نوع الرحلة</th>
+                                    <th>الحافلة</th>
+                                    <th>عدد المقاعد</th>
+                                    <th>المقاعد المتبقية</th>
+                                    <th>السعر</th>
+                                </tr>
+                            </thead>
+                            <tbody>';
+
+                    foreach ($trips as $i => $trip) {
+                        $tripType = ($trip->trip_type === 'one_way') ? 'ذهاب' : 'ذهاب واياب';
+                        $html .= '<tr>
+                            <td>'.($i+1).'</td>
+                            <td>'.($trip->fromCity->name ?? '').'</td>
+                            <td>'.($trip->toCity->name ?? '').'</td>
+                            <td>'.Carbon::parse($trip->departure_datetime)->format('Y-m-d H:i').'</td>
+                            <td>'.$tripType.'</td>
+                            <td>'.($trip->bus->details ?? '').'</td>
+                            <td>'.$trip->number_of_seats.'</td>
+                            <td>'.$trip->remaining_seats.'</td>
+                            <td>'.number_format((float)$trip->ticket_price, 2).'</td>
+                        </tr>';
+                    }
+
+                    if ($trips->isEmpty()) {
+                        $html .= '<tr><td colspan="9" style="text-align:center">لا توجد رحلات</td></tr>';
+                    }
+
+                    $html .= '</tbody></table></body></html>';
+
+                    // توليد PDF
+                    $mpdf = new Mpdf([
+                        'mode' => 'utf-8',
+                        'format' => 'A4',
+                        'default_font' => 'Cairo',
+                    ]);
+                    $mpdf->WriteHTML($html);
+
+                    // إرسال PDF بدون exit() ليختفي loading بشكل صحيح
+                    return response()->streamDownload(function () use ($mpdf) {
+                        echo $mpdf->Output('', 'S'); // 'S' => return as string
+                    }, 'report.pdf');
+                }),
         ];
     }
 

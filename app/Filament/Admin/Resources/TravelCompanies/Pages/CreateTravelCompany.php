@@ -2,9 +2,7 @@
 
 namespace App\Filament\Admin\Resources\TravelCompanies\Pages;
 
-use App\Enum\UserTypeEnum;
 use App\Filament\Admin\Resources\TravelCompanies\TravelCompanyResource;
-use App\Models\Role;
 use App\Models\User;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\DB;
@@ -16,30 +14,67 @@ class CreateTravelCompany extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        return DB::transaction(function () use ($data) {
-            $owner = $data['owner'] ?? [];
+        // استخدم نفس البنية كما في التعديل، البيانات تأتي من 'user' وليس 'owner'
+        $userData = $data['user'] ?? [];
 
-            // Check if phone number already exists in users table
-            if (!empty($owner['phone_number'])) {
-                $exists = User::where('phone_number', $owner['phone_number'])->exists();
-                if ($exists) {
-                    throw ValidationException::withMessages([
-                        'owner.phone_number' => 'رقم الهاتف مستخدم بالفعل.',
-                    ]);
-                }
-            }
+        // 🔹 التحقق من وجود اسم المالك
+        if (empty($userData['name'])) {
+            throw ValidationException::withMessages([
+                'user.name' => 'يرجى إدخال اسم المالك.',
+            ]);
+        }
 
+        // 🔹 التحقق من رقم الهاتف
+        if (empty($userData['phone_number'])) {
+            throw ValidationException::withMessages([
+                'user.phone_number' => 'يرجى إدخال رقم جوال المالك.',
+            ]);
+        }
+
+        // 🔹 التحقق من رقم الهاتف إذا كان مكرر
+        $exists = User::where('phone_number', $userData['phone_number'])->exists();
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'user.phone_number' => 'رقم الهاتف مستخدم بالفعل.',
+            ]);
+        }
+
+        // التحقق من كلمة المرور
+        if (empty($userData['password'])) {
+            throw ValidationException::withMessages([
+                'user.password' => 'يرجى إدخال كلمة المرور.',
+            ]);
+        }
+
+        // 🔹 تحقق من صورة الشركة
+        if (!isset($data['image_path']) || empty($data['image_path'])) {
+            throw ValidationException::withMessages([
+                'image_path' => 'يجب رفع شعار الشركة.',
+            ]);
+        }
+
+        // 🔹 تحقق من نسبة الربح
+        if (!isset($data['commission_amount']) || $data['commission_amount'] === null) {
+            throw ValidationException::withMessages([
+                'commission_amount' => 'يرجى إدخال نسبة الربح.',
+            ]);
+        }
+
+        // إنشاء المستخدم وربطه في transaction
+        return DB::transaction(function () use ($data, $userData) {
             $user = User::create([
-                'name'           => $owner['name'] ?? '',
-                'phone_number'   => $owner['phone_number'] ?? '',
-                'password'       => $owner['password'] ?? '',
-                'type'           => 'travel_company',
-                'verified_at'    => now(),
-                'profile_image_path' => null,
+                'name' => $userData['name'],
+                'phone_number' => $userData['phone_number'],
+                'password' => bcrypt($userData['password']),
+                'type' => 'travel_company',
+                'verified_at' => now(),
             ]);
 
+            // ربط الشركة بالمستخدم الجديد
             $data['user_id'] = $user->id;
-            unset($data['owner']);
+
+            // نحذف بيانات user حتى لا تخزن في travel_companies
+            unset($data['user']);
 
             return $data;
         });

@@ -12,11 +12,11 @@ use App\Filament\Admin\Resources\TravelCompanies\Tables\TravelCompaniesTable;
 use App\Filament\Admin\Resources\TravelCompanies\RelationManagers\BusesRelationManager;
 use App\Filament\Admin\Resources\TravelCompanies\RelationManagers\BusTripsRelationManager;
 use App\Models\TravelCompany;
-use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Filament\Support\Icons\Heroicon;
+use BackedEnum;
 
 class TravelCompanyResource extends Resource
 {
@@ -24,9 +24,10 @@ class TravelCompanyResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    // ✅ حقل موجود في جدول الشركة لتفادي الخطأ
     protected static ?string $recordTitleAttribute = 'company_name';
 
-    // إضافة اسم الناف الخاص بالعربي
+    // اسم القائمة
     protected static ?string $navigationLabel = 'شركات النقل';
 
     public static function form(Schema $schema): Schema
@@ -43,6 +44,7 @@ class TravelCompanyResource extends Resource
     {
         return 'شركة نقل';
     }
+
     public static function infolist(Schema $schema): Schema
     {
         return TravelCompanyInfolist::configure($schema);
@@ -52,15 +54,15 @@ class TravelCompanyResource extends Resource
     {
         return TravelCompaniesTable::configure($table);
     }
+
     public static function getRelations(): array
     {
- 
         return [
             BusesRelationManager::class,
             BusTripsRelationManager::class,
         ];
- 
     }
+
     public static function getPages(): array
     {
         return [

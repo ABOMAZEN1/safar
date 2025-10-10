@@ -14,34 +14,26 @@ class TravelCompaniesTable
 {
     public static function configure(Table $table): Table
     {
-        /// الفائدة عرض الاعمدة ضمن صفحة عرض كل شركات النقل 
         return $table
             ->columns([
-            
-                TextColumn::make('company_name')
-                    ->label('الشركة')
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('contact_number')
-                    ->label('رقم الاتصال')
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('address')
-                    ->label('العنوان')
-                    ->searchable()
-                    ->sortable(),
-               
+                TextColumn::make('user.name')->label('المالك')->searchable(),
+                TextColumn::make('company_name')->label('اسم الشركة')->searchable(),
+                TextColumn::make('contact_number')->label('رقم التواصل')->searchable(),
+                TextColumn::make('address')->label('العنوان')->searchable(),
+                ImageColumn::make('image_path')->label('الصورة'),
+                TextColumn::make('status')->label('الحالة')->badge(),
+                TextColumn::make('commission_amount')->label('العمولة')->numeric()->sortable(),
+                TextColumn::make('created_at')->label('تاريخ الإنشاء')->dateTime()->sortable()->toggleable(),
+                TextColumn::make('updated_at')->label('آخر تعديل')->dateTime()->sortable()->toggleable(),
             ])
-            ->filters([
-                //
-            ])
+            ->filters([])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                ViewAction::make()->label('عرض'),
+                EditAction::make()->label('تعديل'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()->label('حذف المحدد'),
                 ]),
             ]);
     }
