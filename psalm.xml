@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<psalm
+    errorLevel="4"
+    resolveFromConfigFile="true"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+    findUnusedBaselineEntry="true"
+    findUnusedCode="true"
+    findUnusedVariablesAndParams="true"
+    ensureArrayStringOffsetsExist="true"
+    ensureArrayIntOffsetsExist="true"
+    phpVersion="8.2"
+>
+    <projectFiles>
+        <directory name="app" />
+        <directory name="database/factories" />
+        <directory name="database/seeders" />
+        <directory name="routes" />
+        <ignoreFiles>
+            <directory name="vendor" />
+            <directory name="storage" />
+            <directory name="bootstrap/cache" />
+        </ignoreFiles>
+    </projectFiles>
+    
+    <issueHandlers>
+        <PropertyNotSetInConstructor>
+            <errorLevel type="suppress">
+                <directory name="app/Http/Controllers" />
+                <directory name="app/Http/Requests" />
+            </errorLevel>
+        </PropertyNotSetInConstructor>
+        <UndefinedMethod>
+            <errorLevel type="suppress">
+                <referencedMethod name="Illuminate\Foundation\Http\FormRequest::all" />
+            </errorLevel>
+        </UndefinedMethod>
+    </issueHandlers>
+    
+    <stubs>
+        <file name="vendor/laravel/framework/src/Illuminate/Http/Request.php" />
+        <file name="vendor/laravel/framework/src/Illuminate/Foundation/Http/FormRequest.php" />
+    </stubs>
+</psalm>

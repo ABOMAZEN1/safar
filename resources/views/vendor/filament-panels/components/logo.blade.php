@@ -1,0 +1,1 @@
+<img src="{{ asset('images/logo_primery.png') }}" alt="logo" class="h-12 md:h-16 w-auto" style="max-width: 100px;">

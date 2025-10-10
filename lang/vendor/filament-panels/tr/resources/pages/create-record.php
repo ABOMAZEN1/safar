@@ -1,0 +1,39 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+
+    'title' => ':label oluştur',
+
+    'breadcrumb' => 'Oluştur',
+
+    'form' => [
+
+        'actions' => [
+
+            'cancel' => [
+                'label' => 'İptal',
+            ],
+
+            'create' => [
+                'label' => 'Oluştur',
+            ],
+
+            'create_another' => [
+                'label' => 'Oluştur & yeni oluştur',
+            ],
+
+        ],
+
+    ],
+
+    'notifications' => [
+
+        'created' => [
+            'title' => 'Oluşturuldu',
+        ],
+
+    ],
+
+];

@@ -1,0 +1,27 @@
+includes:
+    - ./vendor/nunomaduro/larastan/extension.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - app
+        - bootstrap
+        - config
+        - database
+        - routes
+
+    bootstrapFiles:
+        - vendor/autoload.php
+        - bootstrap/app.php
+
+    inferPrivatePropertyTypeFromConstructor: true
+    reportUnmatchedIgnoredErrors: false
+
+    ignoreErrors:
+        - '#Unsafe usage of new static#'
+        - '#Call to an undefined method Illumieditnate\\Support\\Facades\\.*#'
+        - '#Access to an undefined property Illuminate\\Support\\Facades\\.*#'
+        - '#Call to static method .* on an unknown class#'
+        - '#Method Illuminate\\Support\\Collection::.* does not exist#'
+        - '#Property App\\Models\\.* does not exist#'

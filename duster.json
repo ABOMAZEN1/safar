@@ -1,0 +1,24 @@
+{
+    "include": [
+        "bin",
+        "scripts",
+        "src",
+        "tests"
+    ],
+    "paths": [
+        "app",
+        "routes"
+    ],
+    "exclude": [
+        "database/migrations",
+        "tests"
+    ],
+    "analysis": {
+        "unused_code": true,
+        "orphan_files": true
+    },
+    "threshold": {
+        "unused_classes": 0,
+        "unused_functions": 0
+    }
+}
