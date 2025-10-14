@@ -1,7 +1,0 @@
-[build]
-# نثبت الإضافات المطلوبة أولاً
-command = "install-php-extensions intl gd zip && composer install --ignore-platform-req=ext-intl --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip"
-
-[start]
-# نشغّل السيرفر
-command = "php artisan serve --host=0.0.0.0 --port=8080"
