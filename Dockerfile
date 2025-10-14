@@ -21,9 +21,7 @@ COPY . .
 # إعداد Laravel caches
 RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
     && chmod -R a+rw storage bootstrap/cache \
-    && php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+ 
 
 # Expose PORT (Railway يستخدم متغير البيئة PORT)
 EXPOSE 8080
