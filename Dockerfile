@@ -1,43 +1,39 @@
-# ================================
-#  Stage 1: Install Composer dependencies
-# ================================
-FROM dunglas/frankenphp:php8.2.29-bookworm AS vendor
+# =============== المرحلة الأولى: تثبيت الحزم ===============
+FROM dunglas/frankenphp:php8.2.29-bookworm AS base
 
-# تثبيت الإضافات المطلوبة قبل تشغيل composer
+# تثبيت الإضافات المطلوبة للـ Laravel (intl, gd, zip, pdo_mysql)
 RUN install-php-extensions intl gd zip pdo_mysql
 
+WORKDIR /app
+
+# =============== المرحلة الثانية: تثبيت الحزم عبر Composer ===============
+FROM composer:2 AS vendor
 WORKDIR /app
 COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --no-scripts --optimize-autoloader
 
-RUN composer install \
-    --no-dev \
-    --no-interaction \
-    --no-scripts \
-    --optimize-autoloader
-
-# ================================
-#  Stage 2: Build final app image
-# ================================
-FROM dunglas/frankenphp:php8.2.29-bookworm
-
-# تثبيت نفس الإضافات في الصورة النهائية
-RUN install-php-extensions intl gd zip pdo_mysql
+# =============== المرحلة الثالثة: بناء التطبيق النهائي ===============
+FROM base AS final
 
 WORKDIR /app
 
-# نسخ vendor من المرحلة السابقة
+# نسخ المجلد vendor من المرحلة السابقة
 COPY --from=vendor /app/vendor ./vendor
 
-# نسخ بقية ملفات المشروع
+# نسخ باقي ملفات المشروع
 COPY . .
 
-# إعداد صلاحيات Laravel
+# إنشاء المجلدات وضبط التصاريح
 RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
     && chmod -R a+rw storage bootstrap/cache
 
-# المنفذ
+# نسخ ملف التشغيل (إن وجد)
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh || true
+
+# المنفذ الافتراضي في Railway
 EXPOSE 8080
 ENV SERVER_PORT=8080
 
-# تشغيل التطبيق عبر FrankenPHP
-CMD ["frankenphp", "run", "--config", "public"]
+# تشغيل الخادم
+CMD ["frankenphp", "php-server", "--root", "public", "--port", "8080"]
