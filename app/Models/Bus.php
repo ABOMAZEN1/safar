@@ -16,12 +16,14 @@ use Illuminate\Support\Carbon;
  * @property int           $id
  * @property int           $bus_type_id
  * @property int           $travel_company_id
+ * @property int|null      $assistant_driver_id
  * @property int           $capacity
  * @property string        $details
  * @property Carbon|null   $created_at
  * @property Carbon|null   $updated_at
  * @property-read BusType       $busType
  * @property-read TravelCompany $travelCompany
+ * @property-read AssistantDriver|null $assistantDriver
  *
  * @method static Builder|Bus newModelQuery()
  * @method static Builder|Bus newQuery()
@@ -29,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @method static Builder|Bus whereBusTypeId(int $value)
  * @method static Builder|Bus whereCapacity(int $value)
  * @method static Builder|Bus whereTravelCompanyId(int $value)
+ * @method static Builder|Bus whereAssistantDriverId(int $value)
  * @method static Builder|Bus whereCreatedAt(Carbon $value)
  * @method static Builder|Bus whereDetails(string $value)
  * @method static Builder|Bus whereId(int $value)
@@ -43,6 +46,7 @@ final class Bus extends Model
     protected $fillable = [
         'bus_type_id',
         'travel_company_id',
+        'assistant_driver_id',
         'capacity',
         'details',
     ];
@@ -65,6 +69,16 @@ final class Bus extends Model
     public function busType(): BelongsTo
     {
         return $this->belongsTo(BusType::class, 'bus_type_id');
+    }
+
+    /**
+     * Get the assistant driver associated with the bus.
+     *
+     * @return BelongsTo<AssistantDriver, Bus>
+     */
+    public function assistantDriver(): BelongsTo
+    {
+        return $this->belongsTo(AssistantDriver::class, 'assistant_driver_id');
     }
 
     /**

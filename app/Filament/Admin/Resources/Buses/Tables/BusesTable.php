@@ -15,33 +15,66 @@ class BusesTable
     {
         return $table
             ->columns([
-                TextColumn::make('busType.name')
-                    ->searchable(),
-                TextColumn::make('travelCompany.id')
-                    ->searchable(),
-                TextColumn::make('capacity')
-                    ->numeric()
+                TextColumn::make('id')
+                    ->label('رقم الباص')
                     ->sortable(),
-                TextColumn::make('details')
-                    ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
+
+                TextColumn::make('busType.name')
+                    ->label('نوع الباص')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('travelCompany.company_name')
+                    ->label('شركة النقل')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('assistantDriver.user.name')
+                    ->label('معاون السائق')
+                    ->searchable()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('capacity')
+                    ->label('السعة')
+                    ->numeric()
+                    ->sortable()
+                    ->suffix(' مقعد'),
+
+                TextColumn::make('details')
+                    ->label('التفاصيل')
+                    ->searchable()
+                    ->limit(50)
+                    ->tooltip(function (TextColumn $column): ?string {
+                        $state = $column->getState();
+                        return strlen($state) > 50 ? $state : null;
+                    }),
+
+                TextColumn::make('created_at')
+                    ->label('تاريخ الإنشاء')
+                    ->dateTime('Y-m-d H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->label('تاريخ التعديل')
+                    ->dateTime('Y-m-d H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                ViewAction::make()
+                    ->label('عرض'),
+                EditAction::make()
+                    ->label('تعديل'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->label('حذف المحدد'),
                 ]),
-            ]);
+            ])
+            ->defaultSort('id', 'desc');
     }
 }

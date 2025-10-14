@@ -6,9 +6,17 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
+use Filament\Forms;
+use App\Models\BusTrip;
+use App\Services\BusTrip\BusTripUpdateService;
+use App\Services\Book\BookService;
+use Filament\Actions\Action as ActionsAction;
+use Illuminate\Support\Facades\Auth;
 
 class BusTripsTable
 {
@@ -16,56 +24,26 @@ class BusTripsTable
     {
         return $table
             ->columns([
-                TextColumn::make('fromCity.id')
-                    ->searchable(),
-                TextColumn::make('toCity.id')
-                    ->searchable(),
-                TextColumn::make('bus.id')
-                    ->searchable(),
-                TextColumn::make('busDriver.id')
-                    ->searchable(),
-                TextColumn::make('travelCompany.id')
-                    ->searchable(),
-                TextColumn::make('departure_datetime')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('return_datetime')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('duration_of_departure_trip')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('duration_of_return_trip')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('trip_type')
-                    ->searchable(),
-                TextColumn::make('number_of_seats')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('remaining_seats')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('ticket_price')
-                    ->numeric()
-                    ->sortable(),
-                ImageColumn::make('image'),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
+                TextColumn::make('fromCity.name')->label('مدينة الانطلاق')->searchable(),
+                TextColumn::make('toCity.name')->label('مدينة الوصول')->searchable(),
+                TextColumn::make('busDriver.user.name')->label('السائق')->searchable(),
+                TextColumn::make('travelCompany.company_name')->label('شركة النقل')->searchable(),
+                TextColumn::make('departure_datetime')->dateTime()->label('تاريخ المغادرة')->sortable(),
+                TextColumn::make('return_datetime')->dateTime()->label('تاريخ العودة')->sortable(),
+                TextColumn::make('duration_of_departure_trip')->numeric()->label('مدة الذهاب (ساعات)')->sortable(),
+                TextColumn::make('duration_of_return_trip')->numeric()->label('مدة العودة (ساعات)')->sortable(),
+                TextColumn::make('trip_type')->label('نوع الرحلة')->searchable(),
+                TextColumn::make('number_of_seats')->numeric()->label('عدد المقاعد')->sortable(),
+                TextColumn::make('remaining_seats')->numeric()->label('المقاعد المتبقية')->sortable(),
+                TextColumn::make('ticket_price')->numeric()->label('سعر التذكرة')->sortable(),
+                ImageColumn::make('image')->label('صورة الرحلة'),
             ])
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
-            ])
+            
+                 
+                    ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

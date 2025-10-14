@@ -135,4 +135,38 @@ final class TravelCompany extends Model
      * @return array<string, string>
      */
  
+    public function getBookingsCountAttribute()
+    {
+        return $this->busTrips()
+            ->whereHas('bookings', function ($query) {
+                $query->whereNull('canceled_at');
+            })
+            ->withCount(['bookings' => function ($query) {
+                $query->whereNull('canceled_at');
+            }])
+            ->get()
+            ->sum('bookings_count');
+    }
+
+    public function getGrossRevenueAttribute()
+    {
+        $total = 0;
+        foreach ($this->busTrips as $trip) {
+            $total += $trip->bookings()
+                ->whereNull('canceled_at')
+                ->sum('total_price');
+        }
+        return $total;
+    }
+
+    public function getTotalCommissionAttribute()
+    {
+        $percent = (float) ($this->commission_amount ?? 0);
+        return $this->gross_revenue * $percent / 100;
+    }
+
+    public function getCompanyNetAttribute()
+    {
+        return $this->gross_revenue - $this->total_commission;
+    }
 }

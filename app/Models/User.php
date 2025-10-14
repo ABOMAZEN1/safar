@@ -209,4 +209,30 @@ final class User extends Authenticatable implements FilamentUser
             set: fn(?string $value): ?string => $value,
         );
     }
+
+    /**
+     * Check if the user is a Super Admin
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->roles()->where('role_name', UserTypeEnum::SUPER_ADMIN->value)->exists();
+    }
+
+    /**
+     * Check if the user has Super Admin role
+     */
+    public function hasSuperAdminRole(): bool
+    {
+        foreach ($this->roles as $role) {
+            if ($role->role_name === UserTypeEnum::SUPER_ADMIN->value) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function assistantDriver(): HasOne
+    {
+        return $this->hasOne(AssistantDriver::class);
+    }
 }

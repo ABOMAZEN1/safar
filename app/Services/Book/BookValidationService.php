@@ -10,6 +10,7 @@ use App\Models\BusTrip;
 use App\Models\AppSetting;
 use App\Models\BusTripBooking;
 use App\Enum\BookingStatusEnum;
+use App\Enum\UserTypeEnum;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -18,6 +19,11 @@ final readonly class BookValidationService
     public function ensureOwnBooking(BusTripBooking $busTripBooking): void
     {
         $user = Auth::user();
+
+        // Super Admin can access any booking
+        if ($this->isSuperAdmin($user)) {
+            return;
+        }
 
         if ($user->customer?->id !== $busTripBooking->customer_id) {
             $cause = $user->customer?->id === null ? 'User is not a customer' : 'User does not own this booking';
@@ -41,6 +47,11 @@ final readonly class BookValidationService
     public function ensureOwnTrip(BusTrip $busTrip): void
     {
         $user = Auth::user();
+
+        // Super Admin can access any trip
+        if ($this->isSuperAdmin($user)) {
+            return;
+        }
 
         if ($user->company->id !== $busTrip->travel_company_id) {
             $cause = $user->company->id === null ? 'User is not associated with any company' : 'Company ID mismatch';
@@ -92,6 +103,11 @@ final readonly class BookValidationService
     {
         $user = Auth::user();
 
+        // Super Admin can authorize any driver
+        if ($this->isSuperAdmin($user)) {
+            return;
+        }
+
         if ($busTrip->bus_driver_id !== $user->busDriver->id) {
             throw new Exception(
                 message: __("messages.errors.booking.booking_not_authorized"),
@@ -135,5 +151,13 @@ final readonly class BookValidationService
     public function parseSeatNumbers(string $seatsNumbers): array
     {
         return array_map('intval', array_map('trim', explode(',', $seatsNumbers)));
+    }
+
+    /**
+     * Check if the user is a Super Admin
+     */
+    private function isSuperAdmin($user): bool
+    {
+        return $user->roles()->where('role_name', UserTypeEnum::SUPER_ADMIN->value)->exists();
     }
 }

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 use App\DataTransferObjects\BusTrip\UpdateBusTripDto;
 use App\Repositories\Eloquent\BusTripRepository;
+use App\Enum\UserTypeEnum;
 
 final readonly class BusTripUpdateService
 {
@@ -30,14 +31,18 @@ final readonly class BusTripUpdateService
 
             /** @var User $user */
             $user = Auth::user();
-            $companyId = $user->company->id;
+            
+            // Super Admin doesn't need company validation
+            if (!$this->isSuperAdmin($user)) {
+                $companyId = $user->company->id;
 
-            if ($updateBusTripDto->busId !== null) {
-                $this->validateBusOwnership($updateBusTripDto->busId, $companyId);
-            }
+                if ($updateBusTripDto->busId !== null) {
+                    $this->validateBusOwnership($updateBusTripDto->busId, $companyId);
+                }
 
-            if ($updateBusTripDto->busDriverId !== null) {
-                $this->validateDriverOwnership($updateBusTripDto->busDriverId, $companyId);
+                if ($updateBusTripDto->busDriverId !== null) {
+                    $this->validateDriverOwnership($updateBusTripDto->busDriverId, $companyId);
+                }
             }
 
             $updateData = $updateBusTripDto->toArray();
@@ -121,10 +126,10 @@ final readonly class BusTripUpdateService
         return $currentSeats !== $newSeats;
     }
 
-    private function calculateRemainingSeats(BusTrip $busTrip, int $newSeatCount): int
+    private function calculateRemainingSeats(BusTrip $trip, int $newTotalSeats): int
     {
-        $seatDifference = $newSeatCount - $busTrip->number_of_seats;
-        return $busTrip->remaining_seats + $seatDifference;
+        $bookedSeats = $trip->number_of_seats - $trip->remaining_seats;
+        return max(0, $newTotalSeats - $bookedSeats);
     }
 
     private function validateNonNegativeRemainingSeats(int $remainingSeats): void
@@ -132,17 +137,21 @@ final readonly class BusTripUpdateService
         if ($remainingSeats < 0) {
             throw new Exception(
                 __('messages.errors.generic.validation.failed', [
-                    'reason' => 'Cannot reduce seats below the number already reserved'
+                    'reason' => 'Cannot reduce seats below the number of already booked seats'
                 ]),
-                Response::HTTP_BAD_REQUEST,
+                Response::HTTP_BAD_REQUEST
             );
         }
     }
 
     private function ensureOwnTrip(BusTrip $busTrip): void
     {
-        /** @var User $user */
         $user = Auth::user();
+
+        // Super Admin can access any trip
+        if ($this->isSuperAdmin($user)) {
+            return;
+        }
 
         if ($user->company->id !== $busTrip->travel_company_id) {
             throw new Exception(
@@ -150,5 +159,13 @@ final readonly class BusTripUpdateService
                 Response::HTTP_FORBIDDEN,
             );
         }
+    }
+
+    /**
+     * Check if the user is a Super Admin
+     */
+    private function isSuperAdmin($user): bool
+    {
+        return $user->roles()->where('role_name', UserTypeEnum::SUPER_ADMIN->value)->exists();
     }
 }

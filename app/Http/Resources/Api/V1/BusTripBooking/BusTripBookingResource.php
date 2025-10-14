@@ -72,6 +72,7 @@ final class BusTripBookingResource extends JsonResource
         if ($this->includeIndexDetails) {
             return array_merge($baseAttributes, [
                 'status' => $this->booking_status,
+                'qr_code' => $this->qr_code_path, // إضافة QR code
                 'bus_trip' => $this->whenLoaded('busTrip', fn(): BusTripResource => new BusTripResource($this->busTrip->load([
                     'travelCompany',
                     'fromCity',

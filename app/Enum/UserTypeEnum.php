@@ -12,5 +12,7 @@ enum UserTypeEnum: string
 
     case BUS_DRIVER = 'bus_driver';
 
+    case ASSISTANT_DRIVER = 'assistant_driver';
+
     case TRAVEL_COMPANY = 'travel_company';
 }

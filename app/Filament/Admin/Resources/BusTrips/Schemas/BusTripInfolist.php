@@ -12,41 +12,22 @@ class BusTripInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('fromCity.id')
-                    ->label('From city'),
-                TextEntry::make('toCity.id')
-                    ->label('To city'),
-                TextEntry::make('bus.id')
-                    ->label('Bus'),
-                TextEntry::make('busDriver.id')
-                    ->label('Bus driver'),
-                TextEntry::make('travelCompany.id')
-                    ->label('Travel company'),
-                TextEntry::make('departure_datetime')
-                    ->dateTime(),
-                TextEntry::make('return_datetime')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('duration_of_departure_trip')
-                    ->numeric(),
-                TextEntry::make('duration_of_return_trip')
-                    ->numeric()
-                    ->placeholder('-'),
-                TextEntry::make('trip_type'),
-                TextEntry::make('number_of_seats')
-                    ->numeric(),
-                TextEntry::make('remaining_seats')
-                    ->numeric(),
-                TextEntry::make('ticket_price')
-                    ->numeric(),
-                ImageEntry::make('image')
-                    ->placeholder('-'),
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
+                TextEntry::make('fromCity.name')->label('مدينة الانطلاق'),
+                TextEntry::make('toCity.name')->label('مدينة الوصول'),
+                TextEntry::make('bus.busType.name')->label('الباص'),
+                TextEntry::make('busDriver.user.name')->label('السائق'),
+                TextEntry::make('travelCompany.company_name')->label('شركة النقل'),
+                TextEntry::make('departure_datetime')->label('تاريخ المغادرة')->dateTime(),
+                TextEntry::make('return_datetime')->label('تاريخ العودة')->dateTime()->placeholder('-'),
+                TextEntry::make('duration_of_departure_trip')->label('مدة الذهاب (ساعات)')->numeric(),
+                TextEntry::make('duration_of_return_trip')->label('مدة العودة (ساعات)')->numeric()->placeholder('-'),
+                TextEntry::make('trip_type')->label('نوع الرحلة'),
+                TextEntry::make('number_of_seats')->label('عدد المقاعد')->numeric(),
+                TextEntry::make('remaining_seats')->label('المقاعد المتبقية')->numeric(),
+                TextEntry::make('ticket_price')->label('سعر التذكرة')->numeric(),
+                ImageEntry::make('image')->label('صورة الرحلة')->placeholder('-'),
+                TextEntry::make('created_at')->label('تاريخ الإنشاء')->dateTime()->placeholder('-'),
+                TextEntry::make('updated_at')->label('تاريخ التعديل')->dateTime()->placeholder('-'),
             ]);
     }
 }

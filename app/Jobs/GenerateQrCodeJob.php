@@ -17,13 +17,12 @@ class GenerateQrCodeJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    
     /**
      * QR code styling constants
      */
     private const QR_STORAGE_DIRECTORY = 'qrs';
-
     private const QR_FILE_PREFIX = 'booking-qr-';
-
     private const QR_FILE_EXTENSION = '.svg';
 
     /**
@@ -52,14 +51,26 @@ class GenerateQrCodeJob implements ShouldQueue
 
         $this->ensureStorageDirectoryExists();
 
+        // تحميل معلومات الرحلة للحصول على تفاصيل أكثر
+        $this->busTripBooking->load(['busTrip.travelCompany', 'busTrip.fromCity', 'busTrip.toCity']);
+
         $payload = [
-            'id' => $this->busTripBooking->id,
-            'customer' => $this->busTripBooking->customer_id,
+            'booking_id' => $this->busTripBooking->id,
+            'trip_id' => $this->busTripBooking->bus_trip_id,
+            'customer_id' => $this->busTripBooking->customer_id,
             'seats' => $this->busTripBooking->reserved_seat_numbers,
-            'trip' => $this->busTripBooking->bus_trip_id,
-            'time' => now()->timestamp,
+            'seat_count' => $this->busTripBooking->reserved_seat_count,
+            'total_price' => (float) $this->busTripBooking->total_price,
+            'booking_status' => $this->busTripBooking->booking_status,
+            'trip_departure' => $this->busTripBooking->busTrip->departure_datetime->toIso8601String(),
+            'from_city' => $this->busTripBooking->busTrip->fromCity->name,
+            'to_city' => $this->busTripBooking->busTrip->toCity->name,
+            'company_name' => $this->busTripBooking->busTrip->travelCompany->company_name,
+            'created_at' => $this->busTripBooking->created_at->toIso8601String(),
+            'generated_at' => now()->toIso8601String(),
         ];
 
+        // إنشاء التوقيع الرقمي
         $signature = hash_hmac('sha256', json_encode($payload, JSON_THROW_ON_ERROR), (string) config('app.key'));
         $payload['signature'] = $signature;
 

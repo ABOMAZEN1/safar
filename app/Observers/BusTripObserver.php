@@ -5,104 +5,131 @@ declare(strict_types=1);
 namespace App\Observers;
 
 use App\Models\BusTrip;
+use App\Enum\UserTypeEnum;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Observer لعمليات (إنشاء/تحديث) رحلات الباصات
+ */
 final class BusTripObserver
 {
+    /**
+     * عند إنشاء سجل جديد
+     */
     public function creating(BusTrip $busTrip): void
     {
-        $this->validateSeatCapacity($busTrip);
-
-        $busTrip->remaining_seats = $busTrip->number_of_seats;
+        $this->validateSeatCapacity($busTrip); // تحقق من سعة الباص
+        $busTrip->remaining_seats = $busTrip->number_of_seats; // عيّن المقاعد المتبقية = كل المقاعد
     }
 
+    /**
+     * عند الحفظ (سواء إنشاء أو تحديث)
+     */
     public function saving(BusTrip $busTrip): void
     {
-        if ($busTrip->isDirty('bus_id') && $busTrip->bus !== null) {
+        // تحقق فقط إذا تغير الباص وتم اختياره
+        if ($busTrip->isDirty('bus_id') && $busTrip->bus) {
             $this->validateBusBelongsToCompany($busTrip);
         }
 
-        if ($busTrip->isDirty('bus_driver_id') && $busTrip->busDriver !== null) {
+        // تحقق فقط إذا تغير السائق وتم اختياره
+        if ($busTrip->isDirty('bus_driver_id') && $busTrip->busDriver) {
             $this->validateDriverBelongsToCompany($busTrip);
         }
     }
 
+    /**
+     * عند تحديث السجل
+     */
     public function updating(BusTrip $busTrip): void
     {
         $this->validateSeatCapacity($busTrip);
     }
 
     /**
-     * Validate that the number of seats does not exceed the bus capacity.
-     *
-     * @param BusTrip $busTrip The bus trip to validate
-     * @throws Exception If the number of seats exceeds the bus capacity
+     * التأكد أن عدد المقاعد لا يتجاوز سعة الباص
      */
     private function validateSeatCapacity(BusTrip $busTrip): void
     {
-        if ($busTrip->number_of_seats > $busTrip->bus->capacity) {
-            $errorMessage = __('messages.errors.bus_trip.insufficient_seats');
+        if ($busTrip->bus && $busTrip->number_of_seats > $busTrip->bus->capacity) {
+            // رسالة خطأ مخصصة (يمكن تعديلها في ملف اللغة)
+            $msg = __('messages.errors.bus_trip.insufficient_seats');
 
-            Log::error('BusTrip seat capacity validation failed', [
+            Log::error('فشل تحقق السعة', [
                 'trip_id' => $busTrip->id ?? 'new_trip',
                 'bus_id' => $busTrip->bus_id,
                 'requested_seats' => $busTrip->number_of_seats,
                 'bus_capacity' => $busTrip->bus->capacity,
-                'error' => $errorMessage,
-                'resolution' => 'Reduce the number of seats to be less than or equal to the bus capacity, or assign a bus with larger capacity.'
+                'error' => $msg
             ]);
-
-            throw new Exception($errorMessage);
+            throw new Exception($msg);
         }
     }
 
     /**
-     * Validate that the bus belongs to the same company as the trip.
-     *
-     * @param BusTrip $busTrip The bus trip to validate
-     * @throws Exception If the bus does not belong to the trip company
+     * التأكد أن الباص يتبع نفس الشركة (إلا إذا كان مستخدم Super Admin)
      */
     private function validateBusBelongsToCompany(BusTrip $busTrip): void
     {
-        if ($busTrip->bus->travel_company_id !== $busTrip->travel_company_id) {
-            $errorMessage = __('messages.errors.bus_trip.access_denied');
+        if ($this->isSuperAdmin()) return;
 
-            Log::error('BusTrip company ownership validation failed', [
+        if ($busTrip->bus && $busTrip->bus->travel_company_id !== $busTrip->travel_company_id) {
+            $msg = __('messages.errors.bus_trip.access_denied');
+            Log::error('الباص لا يتبع نفس الشركة', [
                 'trip_id' => $busTrip->id ?? 'new_trip',
                 'bus_id' => $busTrip->bus_id,
                 'bus_company_id' => $busTrip->bus->travel_company_id,
                 'trip_company_id' => $busTrip->travel_company_id,
-                'error' => $errorMessage,
-                'resolution' => "Either change the bus to one owned by the trip's company, or change the trip's company to match the bus's company."
+                'error' => $msg
             ]);
-
-            throw new Exception($errorMessage);
+            throw new Exception($msg);
         }
     }
 
     /**
-     * Validate that the bus driver belongs to the same company as the trip.
-     *
-     * @param BusTrip $busTrip The bus trip to validate
-     * @throws Exception If the driver does not belong to the trip company
+     * التأكد أن السائق يتبع نفس الشركة (إلا إذا كان مستخدم Super Admin)
      */
     private function validateDriverBelongsToCompany(BusTrip $busTrip): void
     {
-        if ($busTrip->busDriver && $busTrip->busDriver->travel_company_id !== $busTrip->travel_company_id) {
-            $errorMessage = __('messages.errors.bus_trip.access_denied');
+        if ($this->isSuperAdmin()) return;
 
-            Log::error('BusDriver company association validation failed', [
+        if ($busTrip->busDriver && $busTrip->busDriver->travel_company_id !== $busTrip->travel_company_id) {
+            $msg = __('messages.errors.bus_trip.access_denied');
+            Log::error('السائق لا يتبع نفس الشركة', [
                 'trip_id' => $busTrip->id ?? 'new_trip',
                 'driver_id' => $busTrip->bus_driver_id,
                 'driver_name' => $busTrip->busDriver->user->name ?? 'Unknown',
                 'driver_company_id' => $busTrip->busDriver->travel_company_id,
                 'trip_company_id' => $busTrip->travel_company_id,
-                'error' => $errorMessage,
-                'resolution' => "Either assign a driver from the same company as the trip, or update the trip's company to match the driver's company."
+                'error' => $msg
             ]);
-
-            throw new Exception($errorMessage);
+            throw new Exception($msg);
         }
+    }
+
+    /**
+     * تحقق إذا كان المستخدم الحالي Super Admin
+     */
+    private function isSuperAdmin(): bool
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        // تحقق إذا كان لدى المستخدم دور Super Admin
+        // إذا كان هناك حقل مباشرة في users (مثلاً user_type) استخدمه بدل العلاقات
+        if (property_exists($user, 'user_type') && $user->user_type === UserTypeEnum::SUPER_ADMIN->value) {
+            return true;
+        }
+
+        // إذا كانت للأدوار علاقة
+        if (method_exists($user, 'roles')) {
+            return $user->roles()->where('role_name', UserTypeEnum::SUPER_ADMIN->value)->exists();
+        }
+
+        return false;
     }
 }

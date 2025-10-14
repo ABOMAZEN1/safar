@@ -1,7 +1,9 @@
 <?php
 
 namespace App\Filament\Admin\Resources\Customers\RelationManagers;
+use Illuminate\Database\Eloquent\Model; // ✅ أضف هذا بالأعلى
 
+use Filament\Resources\Pages\ViewRecord;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
@@ -25,4 +27,8 @@ class BookingsRelationManager extends RelationManager
             ])
             ->filters([]);
     }
+    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
+	{
+		return is_subclass_of($pageClass, ViewRecord::class);
+	}
 }

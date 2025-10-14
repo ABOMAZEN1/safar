@@ -24,7 +24,7 @@ class CustomersResource extends Resource
 {
     protected static ?string $model = Customer::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUser;
 
     protected static ?string $navigationLabel = 'الزبائن';
 
@@ -57,7 +57,10 @@ class CustomersResource extends Resource
     {
         return 'الزبائن';
     }
-
+    public static function getLabel(): string
+    {
+        return 'الزبون ';
+    }
     /**
      * Relation manager to show all bookings for a customer.
      */

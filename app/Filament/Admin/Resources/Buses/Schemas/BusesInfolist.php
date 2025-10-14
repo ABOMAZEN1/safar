@@ -11,20 +11,38 @@ class BusesInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('bus_number')
-                    ->label('رقم الحافلة'),
+                TextEntry::make('id')
+                    ->label('رقم الباص'),
 
-                TextEntry::make('plate_number')
-                    ->label('رقم اللوحة'),
+                TextEntry::make('busType.name')
+                    ->label('نوع الباص'),
 
+                TextEntry::make('travelCompany.company_name')
+                    ->label('شركة النقل'),
+                    TextEntry::make('assistant_status')
+                    ->label('حالة المعاون')
+                    ->getStateUsing(function ($record) {
+                        return $record->assistant_driver_id ? 'مرتبط بمعاون' : 'غير مرتبط بمعاون';
+                    })
+                    ->color(function ($record) {
+                        return $record->assistant_driver_id ? 'success' : 'danger';
+                    }),
+                
                 TextEntry::make('capacity')
-                    ->label('السعة'),
+                    ->label('السعة')
+                    ->suffix(' مقعد'),
 
-                TextEntry::make('type')
-                    ->label('النوع'),
+                TextEntry::make('details')
+                    ->label('التفاصيل')
+                    ->columnSpanFull(),
 
-                TextEntry::make('driver_name')
-                    ->label('اسم السائق'),
+                TextEntry::make('created_at')
+                    ->label('تاريخ الإنشاء')
+                    ->dateTime('Y-m-d H:i'),
+
+                TextEntry::make('updated_at')
+                    ->label('تاريخ التعديل')
+                    ->dateTime('Y-m-d H:i'),
             ]);
     }
 }

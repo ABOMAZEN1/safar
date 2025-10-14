@@ -38,15 +38,8 @@ class BusTripResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('id')->label('المعرف')->sortable(),
-                Tables\Columns\TextColumn::make('fromCity.name')->label('من مدينة')->searchable(),
-                Tables\Columns\TextColumn::make('toCity.name')->label('إلى مدينة')->searchable(),
-                Tables\Columns\TextColumn::make('departure_datetime')->label('وقت الانطلاق')->dateTime(),
-                Tables\Columns\TextColumn::make('ticket_price')->label('السعر')->formatStateUsing(fn($s) => $s !== null ? number_format((float)$s, 2) . ' SYP' : '—'),
-                Tables\Columns\TextColumn::make('remaining_seats')->label('المقاعد المتبقية')->sortable(),
-            ]);
+        return BusTripsTable::configure($table);
+
     }
 
     public static function getRelations(): array
@@ -55,7 +48,12 @@ class BusTripResource extends Resource
             //
         ];
     }
+    public static function getPluralLabel(): string
+    {
+        return 'الرحلات';
+    }
 
+  
     public static function getPages(): array
     {
         return [

@@ -33,5 +33,7 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
+
+    'ngrok_skip_warning' => env('NGROK_SKIP_BROWSER_WARNING', false),
  
 ];

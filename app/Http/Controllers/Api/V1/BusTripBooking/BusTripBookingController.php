@@ -129,13 +129,14 @@ final class BusTripBookingController extends BaseApiController
         try {
             $data = json_decode((string) $request->input('qr_data'), true, 512, JSON_THROW_ON_ERROR);
 
-            if (!isset($data['id'], $data['signature'])) {
+            if (!isset($data['booking_id'], $data['signature'])) {
                 return $this->errorResponse(
                     message: 'Invalid QR code format',
                     statusCode: Response::HTTP_BAD_REQUEST
                 );
             }
 
+            // التحقق من التوقيع الرقمي
             $payload = array_diff_key($data, ['signature' => '']);
             $expectedSignature = hash_hmac('sha256', json_encode($payload, JSON_THROW_ON_ERROR), (string) config('app.key'));
 
@@ -146,13 +147,61 @@ final class BusTripBookingController extends BaseApiController
                 );
             }
 
-            $booking = $this->bookService->getDetails($data['id']);
+            // جلب تفاصيل الحجز مع الرحلة
+            $booking = $this->bookService->getDetails($data['booking_id'])
+                ->load([
+                    'busTrip.travelCompany',
+                    'busTrip.fromCity',
+                    'busTrip.toCity',
+                    'customer.user'
+                ]);
+
+            // التحقق من صحة الرحلة
+            if ($booking->bus_trip_id != $data['trip_id']) {
+                return $this->errorResponse(
+                    message: 'QR code does not match the trip',
+                    statusCode: Response::HTTP_BAD_REQUEST
+                );
+            }
+
+            // التحقق من حالة الحجز
+            if ($booking->booking_status === 'canceled') {
+                return $this->errorResponse(
+                    message: 'This booking has been canceled',
+                    statusCode: Response::HTTP_BAD_REQUEST
+                );
+            }
+
+            // التحقق من تاريخ الرحلة
+            if ($booking->busTrip->departure_datetime < now()) {
+                return $this->errorResponse(
+                    message: 'This trip has already departed',
+                    statusCode: Response::HTTP_BAD_REQUEST
+                );
+            }
 
             return $this->successResponse(
                 message: 'QR code verified successfully',
                 data: [
-                    'booking' => $booking,
+                    'booking' => [
+                        'id' => $booking->id,
+                        'customer_name' => $booking->customer->user->name,
+                        'phone_number' => $booking->customer->user->phone_number,
+                        'seats' => $booking->reserved_seat_numbers,
+                        'seat_count' => $booking->reserved_seat_count,
+                        'total_price' => $booking->total_price,
+                        'booking_status' => $booking->booking_status,
+                        'is_departure_confirmed' => $booking->is_departure_confirmed,
+                    ],
+                    'trip' => [
+                        'id' => $booking->busTrip->id,
+                        'from_city' => $booking->busTrip->fromCity->name,
+                        'to_city' => $booking->busTrip->toCity->name,
+                        'departure_datetime' => $booking->busTrip->departure_datetime->toIso8601String(),
+                        'company_name' => $booking->busTrip->travelCompany->company_name,
+                    ],
                     'verification_time' => now()->toIso8601String(),
+                    'qr_data_matches' => true,
                 ]
             );
         } catch (Exception $exception) {

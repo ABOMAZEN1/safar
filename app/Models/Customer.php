@@ -73,6 +73,7 @@ final class Customer extends Model
         'mother_name',
     ];
 
+    protected $with = ['user'];
     /**
      * The attributes that are required for a complete profile.
      *

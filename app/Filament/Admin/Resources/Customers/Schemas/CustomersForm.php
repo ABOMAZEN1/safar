@@ -12,8 +12,17 @@ class CustomersForm
     {
         return $schema
             ->components([
-                TextInput::make('user.name')->label('اسم المستخدم'),
-                TextInput::make('user.phone_number')->label('رقم الهاتف'),
+                TextInput::make('user.name')
+                ->label('اسم المالك')
+                ->required()
+                ->formatStateUsing(fn ($state, $record) => old('user.name', $state ?? ($record->user->name ?? ''))),
+
+            TextInput::make('user.phone_number')
+                ->label('رقم جوال المالك')
+                ->tel()
+                ->required()
+                ->formatStateUsing(fn ($state, $record) => old('user.phone_number', $state ?? ($record->user->phone_number ?? ''))),
+
                 DatePicker::make('birth_date')->label('تاريخ الميلاد'),
                 TextInput::make('national_id')->label('الرقم الوطني'),
                 TextInput::make('gender')->label('الجنس'),
