@@ -14,17 +14,15 @@ RUN install-php-extensions intl gd zip pdo_mysql
 
 WORKDIR /app
 
-# نسخ ملفات المشروع و vendor
+# نسخ vendor ثم ملفات المشروع
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
 
-# إعداد Laravel caches
+# جهّز صلاحيات التخزين (لا تعمل config:cache هنا)
 RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
-    && chmod -R a+rw storage bootstrap/cache \
- 
+    && chmod -R a+rw storage bootstrap/cache
 
-# Expose PORT (Railway يستخدم متغير البيئة PORT)
 EXPOSE 8080
 
-# CMD بصيغة shell لتوسيع المتغير $PORT بشكل صحيح
-CMD frankenphp -S 0.0.0.0:$PORT public/index.php
+# CMD سيُستبدل أو يُستخدم Start Command في Railway
+CMD ["bash", "./start.sh"]
