@@ -3,22 +3,21 @@
 # --------------------------------------------------
     FROM dunglas/frankenphp:php8.2-bookworm AS base
 
-    # تثبيت الأدوات الضرورية
+    # تثبيت الأدوات الضرورية + Composer
     RUN apt-get update && apt-get install -y \
-        git unzip zip libzip-dev libpng-dev libicu-dev libonig-dev libxml2-dev \
-        && docker-php-ext-install intl gd zip pdo pdo_mysql
+        git unzip zip curl libzip-dev libpng-dev libicu-dev libonig-dev libxml2-dev \
+        && docker-php-ext-install intl gd zip pdo pdo_mysql \
+        && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
     
     # --------------------------------------------------
     # 2️⃣ إعداد مجلد العمل داخل الحاوية
     # --------------------------------------------------
     WORKDIR /app
     
-    # نسخ ملفات Laravel
+    # --------------------------------------------------
+    # 3️⃣ نسخ ملفات Laravel وتثبيت Composer dependencies
+    # --------------------------------------------------
     COPY . .
-    
-    # --------------------------------------------------
-    # 3️⃣ تثبيت Composer dependencies
-    # --------------------------------------------------
     RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
     
     # --------------------------------------------------
@@ -48,5 +47,5 @@
     # 7️⃣ تشغيل السيرفر
     # --------------------------------------------------
     EXPOSE 8080
-    CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+    CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
     
