@@ -7,6 +7,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
 use Filament\Facades\Filament;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Notifications\Notification;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -41,50 +42,64 @@ class Login extends BaseLogin
 
     public function authenticate(): ?\Filament\Auth\Http\Responses\Contracts\LoginResponse
     {
-        // نفس منطق Filament الأساسي مع رسائل أدق
-        $data = $this->form->getState();
+        try {
+            // نفس منطق Filament الأساسي مع رسائل أدق
+            $data = $this->form->getState();
 
-        /** @var SessionGuard $authGuard */
-        $authGuard = Filament::auth();
-        $authProvider = $authGuard->getProvider();
+            /** @var SessionGuard $authGuard */
+            $authGuard = Filament::auth();
+            $authProvider = $authGuard->getProvider();
 
-        $credentials = $this->getCredentialsFromFormData($data);
+            $credentials = $this->getCredentialsFromFormData($data);
 
-        // 1) موجود؟
-        $user = $authProvider->retrieveByCredentials($credentials);
-        if (! $user) {
-            throw ValidationException::withMessages([
-                'data.phone_number' => 'رقم الهاتف غير موجود.',
-            ]);
-        }
-
-        // 2) كلمة السر صحيحة؟
-        if (! $authProvider->validateCredentials($user, $credentials)) {
-            throw ValidationException::withMessages([
-                'data.password' => 'كلمة المرور غير صحيحة.',
-            ]);
-        }
-
-        // 3) صلاحية الوصول للوحة؟
-        if ($user instanceof FilamentUser) {
-            if (! $user->canAccessPanel(Filament::getCurrentOrDefaultPanel())) {
+            // 1) موجود؟
+            $user = $authProvider->retrieveByCredentials($credentials);
+            if (! $user) {
                 throw ValidationException::withMessages([
-                    'data.phone_number' => 'لا تملك صلاحية الدخول إلى لوحة الإدارة.',
+                    'data.phone_number' => 'رقم الهاتف غير موجود.',
                 ]);
             }
+
+            // 2) كلمة السر صحيحة؟
+            if (! $authProvider->validateCredentials($user, $credentials)) {
+                throw ValidationException::withMessages([
+                    'data.password' => 'كلمة المرور غير صحيحة.',
+                ]);
+            }
+
+            // 3) صلاحية الوصول للوحة؟
+            if ($user instanceof FilamentUser) {
+                if (! $user->canAccessPanel(Filament::getCurrentOrDefaultPanel())) {
+                    throw ValidationException::withMessages([
+                        'data.phone_number' => 'لا تملك صلاحية الدخول إلى لوحة الإدارة.',
+                    ]);
+                }
+            }
+
+            if (! $authGuard->attemptWhen($credentials, function (Authenticatable $u): bool {
+                return true; // اجتزنا الشروط بالأعلى
+            }, $data['remember'] ?? false)) {
+                // احتياط
+                event(app(Failed::class, ['guard' => property_exists($authGuard, 'name') ? $authGuard->name : '', 'user' => $user, 'credentials' => $credentials]));
+                $this->throwFailureValidationException();
+            }
+
+            session()->regenerate();
+
+            return app(\Filament\Auth\Http\Responses\Contracts\LoginResponse::class);
+        } catch (ValidationException $e) {
+            throw $e; // دع رسائل التحقق تظهر داخل النموذج
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('فشل تسجيل الدخول')
+                ->body(app()->hasDebugModeEnabled() ? $e->getMessage() : 'حدث خطأ غير متوقع. حاول لاحقاً.')
+                ->danger()
+                ->send();
+
+            throw ValidationException::withMessages([
+                'data.phone_number' => 'تعذر إتمام تسجيل الدخول. حاول مرة أخرى.',
+            ]);
         }
-
-        if (! $authGuard->attemptWhen($credentials, function (Authenticatable $u): bool {
-            return true; // اجتزنا الشروط بالأعلى
-        }, $data['remember'] ?? false)) {
-            // احتياط
-            event(app(Failed::class, ['guard' => property_exists($authGuard, 'name') ? $authGuard->name : '', 'user' => $user, 'credentials' => $credentials]));
-            $this->throwFailureValidationException();
-        }
-
-        session()->regenerate();
-
-        return app(\Filament\Auth\Http\Responses\Contracts\LoginResponse::class);
     }
 }
 

@@ -35,6 +35,12 @@ final class RoleSeeder extends Seeder
             ],
         ];
 
-        Role::insert($roles);
+        // Make seeding idempotent to avoid duplicate key errors on reruns
+        // Uses role_name as the unique key and refreshes updated_at
+        \App\Models\Role::upsert(
+            $roles,
+            ['role_name'],     // unique by role_name
+            ['updated_at']     // columns to update on conflict
+        );
     }
 }

@@ -11,10 +11,10 @@ echolog() {
 
 echolog "[entrypoint] start"
 
-# تأكد من المجلدات والأذونات (أعطي إذن كامل 777 للـ storage و bootstrap/cache لضمان جلسات Laravel)
+# تأكد من المجلدات والأذونات
 echolog "[entrypoint] ensure folders & permissions"
 mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache
-chmod -R 777 storage bootstrap/cache || true
+chmod -R a+rw storage bootstrap/cache || true
 
 # مسح الكاشات (آمن)
 echolog "[entrypoint] clearing caches"
@@ -22,10 +22,6 @@ php artisan config:clear 2>&1 | tee -a "$START_LOG" || true
 php artisan cache:clear 2>&1 | tee -a "$START_LOG" || true
 php artisan route:clear 2>&1 | tee -a "$START_LOG" || true
 php artisan view:clear 2>&1 | tee -a "$START_LOG" || true
-
-# حذف كل ملفات الجلسات القديمة - هذا لمنع مشاكل looping للوج ان من جلسة قديمة تالفة
-echolog "[entrypoint] clearing session files"
-rm -f storage/framework/sessions/* 2>/dev/null || true
 
 # اختبار متغيرات البيئة الأساسية
 echolog "[entrypoint] env check"
@@ -66,10 +62,6 @@ fi
 echolog "[entrypoint] composer dump-autoload & package discover (safe)"
 composer dump-autoload --optimize 2>&1 | tee -a "$START_LOG" || true
 php artisan package:discover --ansi 2>&1 | tee -a "$START_LOG" || true
-
-# فحص إعدادات Laravel session الصحيحة للمساعدة في الـ Debug
-echolog "[entrypoint] Laravel session config:"
-php artisan tinker --execute="echo config('session.driver') . PHP_EOL; echo config('session.lifetime') . PHP_EOL; echo config('session.path') . PHP_EOL; echo config('session.domain') . PHP_EOL; echo config('session.secure') . PHP_EOL;" 2>&1 | tee -a "$START_LOG" || true
 
 # طباعة آخر الأسطر من Laravel log و startup log لكي تساعدنا بالـ debug فورًا
 echolog "[entrypoint] last lines of storage/logs/laravel.log (if exists):"

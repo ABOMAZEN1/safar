@@ -16,52 +16,38 @@ final class SuperAdminSeeder extends Seeder
 {
     public function run(): void
     {
-        $admins = collect([
-            [
-                'name' => 'Super Admin',
-                'phone_number' => '0912345678',
-            ],
-        ]);
-
-        $adminRole = Role::where('role_name', UserTypeEnum::SUPER_ADMIN->value)->firstOrFail();
         $now = now();
 
-        // Prepare users data for bulk insert
-        $usersData = $admins->map(fn ($admin): array => [
-            'name' => $admin['name'],
-            'phone_number' => $admin['phone_number'],
-            'password' => Hash::make('StrongP@ss123'),
-            'type' => UserTypeEnum::SUPER_ADMIN->value,
-            'verified_at' => $now,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ])->toArray();
+        // Allow overriding credentials from environment
+        $phone = env('ADMIN_PHONE', '0999999999');
+        $password = env('ADMIN_PASSWORD', 'Admin@12345');
+        $name = env('ADMIN_NAME', 'Super Admin');
 
-        // Bulk insert users
-        User::insert($usersData);
+        $adminRole = Role::where('role_name', UserTypeEnum::SUPER_ADMIN->value)->firstOrFail();
 
-        // Get the inserted users
-        $users = User::whereIn('phone_number', $admins->pluck('phone_number'))->get();
+        // Create or update the super admin user idempotently
+        /** @var User $user */
+        $user = User::updateOrCreate(
+            ['phone_number' => $phone],
+            [
+                'name' => $name,
+                'password' => Hash::make($password),
+                'type' => UserTypeEnum::SUPER_ADMIN->value,
+                'verified_at' => $now,
+                'updated_at' => $now,
+            ]
+        );
 
-        // Prepare user roles data for bulk insert
-        $userRolesData = $users->map(fn ($user): array => [
-            'user_id' => $user->id,
-            'role_id' => $adminRole->id,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ])->toArray();
+        // Attach role if missing
+        DB::table('user_roles')->updateOrInsert(
+            ['user_id' => $user->id, 'role_id' => $adminRole->id],
+            ['created_at' => $now, 'updated_at' => $now]
+        );
 
-        // Bulk insert user roles
-        DB::table('user_roles')->insert($userRolesData);
-
-        // Prepare super admins data for bulk insert
-        $superAdminsData = $users->map(fn ($user): array => [
-            'user_id' => $user->id,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ])->toArray();
-
-        // Bulk insert super admins
-        SuperAdmin::insert($superAdminsData);
+        // Ensure a record exists in super_admins table
+        SuperAdmin::updateOrCreate(
+            ['user_id' => $user->id],
+            ['updated_at' => $now, 'created_at' => $user->created_at ?? $now]
+        );
     }
 }
