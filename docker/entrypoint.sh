@@ -1,25 +1,18 @@
-#!/bin/sh
+#!/bin/bash
+set -e
 
-echo "[entrypoint] إعداد Laravel..."
+echo "[entrypoint] setting permissions..."
+mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache
+chmod -R a+rw storage bootstrap/cache
 
-# إنشاء key لو مش موجود
-if [ -z "$(grep ^APP_KEY= .env | cut -d '=' -f2)" ]; then
-    echo "🚀 Generating APP_KEY..."
-    php artisan key:generate --force
-fi
-
-# تشغيل المايغريشنس
-echo "📦 Running migrations..."
-php artisan migrate --force
-
-# تنظيف وتهيئة الكاش
+echo "[entrypoint] clearing old caches..."
 php artisan config:clear
+php artisan cache:clear
 php artisan route:clear
 php artisan view:clear
 
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+echo "[entrypoint] running migrations..."
+php artisan migrate --force
 
-echo "✅ كل شيء جاهز، تشغيل السيرفر..."
-php artisan serve --host=0.0.0.0 --port=8080
+echo "[entrypoint] starting PHP built-in server..."
+exec php -S 0.0.0.0:8080 -t public

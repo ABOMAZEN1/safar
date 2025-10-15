@@ -1,9 +1,9 @@
 # ==========================================================
-# 🧱 المرحلة 1: تثبيت مكتبات النظام و Composer
+# 🧱 المرحلة 1: تثبيت PHP والإضافات
 # ==========================================================
 FROM php:8.2-fpm-bullseye AS base
 
-# تثبيت الإضافات والمكتبات المطلوبة
+# تثبيت المكتبات المطلوبة وPHP extensions
 RUN apt-get update && apt-get install -y \
     git unzip zip libzip-dev libpng-dev libicu-dev libonig-dev libxml2-dev \
     && docker-php-ext-install intl gd zip pdo pdo_mysql
@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # ==========================================================
-# 📦 المرحلة 2: تثبيت الـ Composer dependencies
+# 📦 المرحلة 2: تثبيت Composer dependencies
 # ==========================================================
 FROM composer:latest AS vendor
 WORKDIR /app
@@ -31,16 +31,16 @@ COPY --from=vendor /app/vendor ./vendor
 # نسخ باقي المشروع
 COPY . .
 
-# إنشاء مجلدات التخزين والصلاحيات
+# إنشاء مجلدات التخزين وضبط الصلاحيات
 RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
     && chmod -R a+rw storage bootstrap/cache
 
-# ==========================================================
-# ⚙️ الأوامر النهائية عند التشغيل
-# ==========================================================
-# تنظيف الكاش وتشغيل السيرفر
-CMD php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache && \
-    php artisan migrate --force && \
-    php artisan serve --host=0.0.0.0 --port=8080
+# نسخ ملف entrypoint
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# المنفذ الافتراضي في Railway
+EXPOSE 8080
+
+# بدء الحاوية باستخدام entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
