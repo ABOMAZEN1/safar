@@ -1,5 +1,5 @@
 # ==========================================================
-# 🧱 المرحلة 1: تثبيت PHP والإضافات
+# 🧱 المرحلة 1: تثبيت PHP والإضافات وComposer
 # ==========================================================
 FROM php:8.2-fpm-bullseye AS base
 
@@ -8,25 +8,31 @@ RUN apt-get update && apt-get install -y \
     git unzip zip libzip-dev libpng-dev libicu-dev libonig-dev libxml2-dev \
     && docker-php-ext-install intl gd zip pdo pdo_mysql
 
+# تثبيت Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
 WORKDIR /app
 
-# ==========================================================
-# 📦 المرحلة 2: تثبيت Composer dependencies
-# ==========================================================
-FROM composer:latest AS vendor
-WORKDIR /app
+# نسخ ملفات Composer
 COPY composer.json composer.lock ./
+
+# تثبيت حزم PHP
 RUN composer install --no-dev --no-interaction --no-progress --optimize-autoloader
 
 # ==========================================================
-# 🚀 المرحلة 3: بناء نسخة الإنتاج
+# 🚀 المرحلة 2: بناء نسخة الإنتاج
 # ==========================================================
-FROM base AS production
+FROM php:8.2-fpm-bullseye AS production
 
 WORKDIR /app
 
-# نسخ vendor من مرحلة Composer
-COPY --from=vendor /app/vendor ./vendor
+# تثبيت نفس الإضافات
+RUN apt-get update && apt-get install -y \
+    git unzip zip libzip-dev libpng-dev libicu-dev libonig-dev libxml2-dev \
+    && docker-php-ext-install intl gd zip pdo pdo_mysql
+
+# نسخ vendor من مرحلة base
+COPY --from=base /app/vendor ./vendor
 
 # نسخ باقي المشروع
 COPY . .
