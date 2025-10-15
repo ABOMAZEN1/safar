@@ -80,5 +80,6 @@ if command -v frankenphp >/dev/null 2>&1; then
   exec frankenphp php-server --root public --port 8080
 else
   echolog "[entrypoint] starting built-in php server on 0.0.0.0:8080"
-  exec php -S 0.0.0.0:8080 -t public
+  # IMPORTANT: provide router script so that all dynamic routes (e.g., /livewire/livewire.js) are handled by Laravel
+  exec php -S 0.0.0.0:8080 -t public public/index.php
 fi
