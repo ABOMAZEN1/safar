@@ -1,52 +1,53 @@
 # ==========================================================
-# 🧱 المرحلة 1: تثبيت PHP والإضافات وComposer
+# 🧱 المرحلة 1: PHP + extension + Composer (لبناء vendor)
 # ==========================================================
 FROM php:8.2-fpm-bullseye AS base
 
-# تثبيت المكتبات المطلوبة وPHP extensions
+# تثبيت مكتبات النظام و PHP extensions
 RUN apt-get update && apt-get install -y \
     git unzip zip libzip-dev libpng-dev libicu-dev libonig-dev libxml2-dev \
-    && docker-php-ext-install intl gd zip pdo pdo_mysql
+  && docker-php-ext-install intl gd zip pdo pdo_mysql
 
-# تثبيت Composer
+# انسخ binary الخاص بـ composer من صورة composer الرسمية
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# نسخ ملفات Composer
+# انسخ ملفات composer فقط للحصول على layer قابل لإعادة الاستخدام
 COPY composer.json composer.lock ./
 
-# تثبيت حزم PHP
-RUN composer install --no-dev --no-interaction --no-progress --optimize-autoloader
+# ثبت зависимости بدون تنفيذ السكربتات (لتفادي الحاجة لوجود artisan الآن)
+RUN composer install --no-dev --no-interaction --no-progress --optimize-autoloader --no-scripts
 
 # ==========================================================
-# 🚀 المرحلة 2: بناء نسخة الإنتاج
+# 🚀 المرحلة 2: بناء نسخة الإنتاج النهائية
 # ==========================================================
 FROM php:8.2-fpm-bullseye AS production
 
 WORKDIR /app
 
-# تثبيت نفس الإضافات
+# ثبت نفس الإضافات في الصورة النهائية
 RUN apt-get update && apt-get install -y \
     git unzip zip libzip-dev libpng-dev libicu-dev libonig-dev libxml2-dev \
-    && docker-php-ext-install intl gd zip pdo pdo_mysql
+  && docker-php-ext-install intl gd zip pdo pdo_mysql
 
-# نسخ vendor من مرحلة base
+# انسخ vendor من المرحلة السابقة
 COPY --from=base /app/vendor ./vendor
 
-# نسخ باقي المشروع
+# الآن انسخ بقية ملفات المشروع (بما في ذلك artisan)
 COPY . .
 
-# إنشاء مجلدات التخزين وضبط الصلاحيات
+# بعد نسخ المشروع، نعيد توليد الـ autoload ونشغّل package discovery
+RUN composer dump-autoload --optimize || true
+RUN php artisan package:discover --ansi || true
+
+# إعداد المجلدات و الأذونات
 RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
     && chmod -R a+rw storage bootstrap/cache
 
-# نسخ ملف entrypoint
+# انسخ entrypoint وشغّله
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# المنفذ الافتراضي في Railway
 EXPOSE 8080
-
-# بدء الحاوية باستخدام entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
