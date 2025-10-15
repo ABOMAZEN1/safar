@@ -1,51 +1,73 @@
-# --------------------------------------------------
-# 1️⃣ نستخدم صورة PHP مناسبة مع Composer و Node
-# --------------------------------------------------
-    FROM dunglas/frankenphp:php8.2-bookworm AS base
+# ==========================================================
+# 🧱 المرحلة 1: بناء الـ Composer dependencies
+# ==========================================================
+FROM php:8.2-fpm-bullseye AS build
 
-    # تثبيت الأدوات الضرورية + Composer
-    RUN apt-get update && apt-get install -y \
-        git unzip zip curl libzip-dev libpng-dev libicu-dev libonig-dev libxml2-dev \
-        && docker-php-ext-install intl gd zip pdo pdo_mysql \
-        && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-    
-    # --------------------------------------------------
-    # 2️⃣ إعداد مجلد العمل داخل الحاوية
-    # --------------------------------------------------
-    WORKDIR /app
-    
-    # --------------------------------------------------
-    # 3️⃣ نسخ ملفات Laravel وتثبيت Composer dependencies
-    # --------------------------------------------------
-    COPY . .
-    RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
-    
-    # --------------------------------------------------
-    # 4️⃣ إعداد Node (لو عندك Vite أو Filament يحتاجه)
-    # --------------------------------------------------
-    FROM node:22 AS frontend
-    WORKDIR /app
-    COPY . .
-    RUN npm ci && npm run build
-    
-    # --------------------------------------------------
-    # 5️⃣ نقل الملفات النهائية إلى بيئة الإنتاج
-    # --------------------------------------------------
-    FROM base AS final
-    WORKDIR /app
-    COPY --from=frontend /app/public ./public
-    COPY --from=frontend /app/resources ./resources
-    COPY --from=base /app/vendor ./vendor
-    COPY . .
-    
-    # --------------------------------------------------
-    # 6️⃣ إعداد Laravel للتشغيل
-    # --------------------------------------------------
-    RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
-    
-    # --------------------------------------------------
-    # 7️⃣ تشغيل السيرفر
-    # --------------------------------------------------
-    EXPOSE 8080
-    CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
-    
+# تثبيت الإضافات المطلوبة
+RUN apt-get update && apt-get install -y \
+    git unzip zip libzip-dev libpng-dev libicu-dev libonig-dev libxml2-dev \
+    && docker-php-ext-install intl gd zip pdo pdo_mysql
+
+# تثبيت Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+
+# نسخ ملفات Laravel
+COPY composer.json composer.lock ./
+
+# تثبيت مكتبات PHP بدون سكريبتات post-install
+RUN COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_DISCARD_CHANGES=1 \
+    composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --no-progress
+
+# نسخ كل المشروع
+COPY . .
+
+# ==========================================================
+# 🏗️ المرحلة 2: بناء الـ Frontend (اختياري)
+# ==========================================================
+FROM node:22-alpine AS frontend
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci && npm run build
+
+# ==========================================================
+# 🚀 المرحلة 3: التشغيل الفعلي
+# ==========================================================
+FROM php:8.2-fpm-bullseye AS production
+
+# تثبيت الإضافات
+RUN apt-get update && apt-get install -y \
+    libzip-dev libpng-dev libicu-dev libonig-dev libxml2-dev \
+    && docker-php-ext-install intl gd zip pdo pdo_mysql
+
+# نسخ Composer من المرحلة الأولى
+COPY --from=build /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+
+# نسخ الملفات من مرحلة البناء
+COPY --from=build /app ./
+
+# نسخ الـfrontend الجاهز (لو موجود)
+COPY --from=frontend /app/public/build ./public/build
+
+# إنشاء مجلدات Laravel اللازمة
+RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
+    && chmod -R a+rw storage bootstrap/cache
+
+# ==========================================================
+# 🧩 أوامر بدء التشغيل
+# ==========================================================
+
+# 1️⃣ توليد APP_KEY إذا مفقود
+# 2️⃣ تشغيل الـmigrations (بدون توقف)
+# 3️⃣ تشغيل السيرفر
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 8080
+
+ENTRYPOINT ["/entrypoint.sh"]
